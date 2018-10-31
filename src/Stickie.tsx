@@ -17,6 +17,14 @@ export class Stickie extends React.Component<IProps, {}> {
   private mouseDownCoordinates?: ICoordinates;
   private initialCoordinates?: ICoordinates;
 
+  public componentDidMount() {
+    document.addEventListener('mousemove', this.handleOnMouseMove);
+  }
+
+  public componentWillUnmount() {
+    document.removeEventListener('mousemove', this.handleOnMouseMove as any);
+  }
+
   public render() {
     const {x, y} = this.props.coordinates;
     const {text} = this.props;
@@ -31,7 +39,6 @@ export class Stickie extends React.Component<IProps, {}> {
         contentEditable={true} 
         style={style}
         onMouseDown={this.handleOnMouseDown}
-        onMouseMove={this.handleOnMouseMove}
         onMouseUp={this.handleOnMouseUp}
         dangerouslySetInnerHTML={{__html: text}}
       />
@@ -48,7 +55,7 @@ export class Stickie extends React.Component<IProps, {}> {
     this.initialCoordinates = undefined;
   }
   
-  private handleOnMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+  private handleOnMouseMove = (e: MouseEvent) => {
     const coordinates = {
       x: e.clientX,
       y: e.clientY,
