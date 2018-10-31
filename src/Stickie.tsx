@@ -11,6 +11,7 @@ interface IProps {
   coordinates: ICoordinates;
   text: string;
   onChangeCoordinates: (coordinates: ICoordinates) => void;
+  onDelete: () => void;
 }
 
 export class Stickie extends React.Component<IProps, {}> {
@@ -41,8 +42,16 @@ export class Stickie extends React.Component<IProps, {}> {
         onMouseDown={this.handleOnMouseDown}
         onMouseUp={this.handleOnMouseUp}
         dangerouslySetInnerHTML={{__html: text}}
+        onKeyDown={this.handleKeyDown}
       />
     );
+  }
+
+  private handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    // Backspace and CMD
+    if (e.keyCode === 8 && e.metaKey) {
+      this.props.onDelete();
+    }
   }
 
   private handleOnMouseDown = (e: React.MouseEvent<HTMLElement>) => {

@@ -12,7 +12,8 @@ interface IStickie {
 }
 
 interface IState {
-  stickies: {[id: string]: IStickie}
+  stickies: {[id: number]: IStickie};
+  nextId: number;
 }
 
 class App extends React.Component<{}, IState> {
@@ -20,15 +21,16 @@ class App extends React.Component<{}, IState> {
   constructor(props: {}) {
     super(props);
     this.state = {
+      nextId: 0,
       stickies: {
-        id1: {
+        [-1]: {
           coordinates: {
             x: 0,
             y: 0,
           },
           text: 'test123',
         },
-        id2: {
+        [-2]: {
           coordinates: {
             x: 100,
             y: 100,
@@ -41,7 +43,7 @@ class App extends React.Component<{}, IState> {
 
   public render() {
     return (
-      <div className="App">
+      <div className="App" onDoubleClick={this.handleDoubleClick}>
         {
           Object.keys(this.state.stickies).map(stickieId => {
             const stickie = this.state.stickies[stickieId];
@@ -50,7 +52,8 @@ class App extends React.Component<{}, IState> {
                 coordinates={stickie.coordinates} 
                 text={stickie.text} 
                 key={stickieId} 
-                onChangeCoordinates={this.handleChangeCoordinates.bind(this, stickieId)} 
+                onChangeCoordinates={this.handleChangeStickieCoordinates.bind(this, stickieId)} 
+                onDelete={this.deleteStickie.bind(this, stickieId)}
               />
             );
           })
@@ -59,7 +62,18 @@ class App extends React.Component<{}, IState> {
     );
   }
 
-  private handleChangeCoordinates = (stickieId: string, coordinates: {x: number, y: number}) => {
+  private deleteStickie = (stickieId: number) => {
+    this.setState(s => {
+      delete s.stickies[stickieId];
+      return {
+        stickies: {
+          ...s.stickies,
+        }
+      };
+    });
+  }
+
+  private handleChangeStickieCoordinates = (stickieId: number, coordinates: {x: number, y: number}) => {
     this.setState(s => ({
       stickies: {
         ...s.stickies,
@@ -69,6 +83,25 @@ class App extends React.Component<{}, IState> {
         }
       }
     }));
+  }
+
+  private handleDoubleClick = (e: React.MouseEvent<HTMLElement>) => {
+    const coordinates = {
+      x: e.clientX,
+      y: e.clientY,
+    }
+    this.setState(s => (
+      {
+        nextId: s.nextId + 1,
+        stickies: {
+          ...s.stickies,
+          [s.nextId]: {
+            coordinates,
+            text: ''
+          }
+        }
+      }
+    ));
   }
 }
 
