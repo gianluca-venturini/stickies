@@ -14,13 +14,16 @@ interface IStickie {
 interface IState {
   stickies: {[id: number]: IStickie};
   nextId: number;
+  connectionError: boolean;
 }
 
 class App extends React.Component<{}, IState> {
+  private ws: WebSocket;
 
   constructor(props: {}) {
     super(props);
     this.state = {
+      connectionError: false,
       nextId: 0,
       stickies: {
         [-1]: {
@@ -41,6 +44,19 @@ class App extends React.Component<{}, IState> {
     }
   }
 
+  public componentDidMount() {
+    this.ws = new WebSocket(`ws://${window.location.hostname}:8080`);
+
+    // Listen for messages
+    this.ws.addEventListener('message', event => {
+      // tslint:disable-next-line:no-console
+      console.log('Received message', event.data);
+      this.setState({
+        stickies: JSON.parse(event.data)
+      })
+    });
+  }
+
   public render() {
     return (
       <div className="App" onDoubleClick={this.handleDoubleClick}>
@@ -54,6 +70,7 @@ class App extends React.Component<{}, IState> {
                 key={stickieId} 
                 onChangeCoordinates={this.handleChangeStickieCoordinates.bind(this, stickieId)} 
                 onDelete={this.deleteStickie.bind(this, stickieId)}
+                onTextChange={this.handleTextChange.bind(this, stickieId)}
               />
             );
           })
@@ -63,7 +80,7 @@ class App extends React.Component<{}, IState> {
   }
 
   private deleteStickie = (stickieId: number) => {
-    this.setState(s => {
+    this.updateState(s => {
       delete s.stickies[stickieId];
       return {
         stickies: {
@@ -74,7 +91,7 @@ class App extends React.Component<{}, IState> {
   }
 
   private handleChangeStickieCoordinates = (stickieId: number, coordinates: {x: number, y: number}) => {
-    this.setState(s => ({
+    this.updateState(s => ({
       stickies: {
         ...s.stickies,
         [stickieId]: {
@@ -85,12 +102,26 @@ class App extends React.Component<{}, IState> {
     }));
   }
 
+  private handleTextChange = (stickieId: number, text: string) => {
+    // tslint:disable-next-line:no-console
+    console.log(text);
+    this.updateState(s => ({
+      stickies: {
+        ...s.stickies,
+        [stickieId]: {
+          ...s.stickies[stickieId],
+          text
+        }
+      }
+    }));
+  }
+
   private handleDoubleClick = (e: React.MouseEvent<HTMLElement>) => {
     const coordinates = {
       x: e.clientX,
       y: e.clientY,
     }
-    this.setState(s => (
+    this.updateState(s => (
       {
         nextId: s.nextId + 1,
         stickies: {
@@ -102,6 +133,38 @@ class App extends React.Component<{}, IState> {
         }
       }
     ));
+  }
+
+  private updateState = <K extends keyof IState>(
+    updateState: (
+      (
+        prevState: Readonly<IState>, 
+        props: Readonly<{}>
+      ) => (Pick<IState, K> | IState | null)
+    ) | (Pick<IState, K> | IState | null)
+  ) => {
+    if (typeof updateState === 'function') {
+      this.setState((state, props) => {
+        const newState = updateState(state, props);
+        // tslint:disable-next-line:no-console
+        console.log(newState);
+        if (newState && newState.stickies) {
+          this.updateStickiesServer(newState.stickies);
+        }
+        return newState;
+      });
+    } else {
+      this.setState(updateState);
+      // tslint:disable-next-line:no-console
+      console.log(updateState);
+      if (updateState && updateState.stickies) {
+        this.updateStickiesServer(updateState.stickies);
+      }
+    }
+  }
+
+  private updateStickiesServer = (stickies: {[id: number]: IStickie}) => {
+    this.ws.send(JSON.stringify(stickies));
   }
 }
 

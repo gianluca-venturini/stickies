@@ -11,6 +11,7 @@ interface IProps {
   coordinates: ICoordinates;
   text: string;
   onChangeCoordinates: (coordinates: ICoordinates) => void;
+  onTextChange: (text: string) => void;
   onDelete: () => void;
 }
 
@@ -35,16 +36,20 @@ export class Stickie extends React.Component<IProps, {}> {
     };
 
     return (
-      <div 
+      <textarea 
         className="Stickie" 
-        contentEditable={true} 
         style={style}
         onMouseDown={this.handleOnMouseDown}
         onMouseUp={this.handleOnMouseUp}
-        dangerouslySetInnerHTML={{__html: text}}
+        value={text}
         onKeyDown={this.handleKeyDown}
+        onChange={this.handleChange}
       />
     );
+  }
+
+  private handleChange = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    this.props.onTextChange(e.currentTarget.value);
   }
 
   private handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
