@@ -13,6 +13,8 @@ interface IProps {
   onChangeCoordinates: (coordinates: ICoordinates) => void;
   onTextChange: (text: string) => void;
   onDelete: () => void;
+  width: number;
+  height: number;
 }
 
 export class Stickie extends React.Component<IProps, {}> {
@@ -29,10 +31,12 @@ export class Stickie extends React.Component<IProps, {}> {
 
   public render() {
     const {x, y} = this.props.coordinates;
-    const {text} = this.props;
+    const {text, height, width} = this.props;
     const style = {
+      height,
       left: x,
       top: y,
+      width,
     };
 
     return (

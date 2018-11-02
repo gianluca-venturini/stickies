@@ -1,7 +1,8 @@
 import * as React from 'react';
+import * as uuid4 from 'uuid/v4';
+
 import './App.css';
 
-import * as uuid4 from 'uuid/v4';
 import { Stickie } from './Stickie';
 
 interface IStickie {
@@ -16,6 +17,9 @@ interface IState {
   stickies: {[id: number]: IStickie};
   connectionError: boolean;
 }
+
+const STICKIE_WIDTH = 100;
+const STICKIE_HEIGHT = 100;
 
 class App extends React.Component<{}, IState> {
   private ws: WebSocket;
@@ -70,6 +74,8 @@ class App extends React.Component<{}, IState> {
                 onChangeCoordinates={this.handleChangeStickieCoordinates.bind(this, stickieId)} 
                 onDelete={this.deleteStickie.bind(this, stickieId)}
                 onTextChange={this.handleTextChange.bind(this, stickieId)}
+                width={STICKIE_WIDTH}
+                height={STICKIE_HEIGHT}
               />
             );
           })
@@ -117,8 +123,8 @@ class App extends React.Component<{}, IState> {
 
   private handleDoubleClick = (e: React.MouseEvent<HTMLElement>) => {
     const coordinates = {
-      x: e.clientX,
-      y: e.clientY,
+      x: e.clientX - STICKIE_WIDTH / 2,
+      y: e.clientY - STICKIE_HEIGHT / 2,
     }
     const id = uuid4();
     this.updateState(s => (

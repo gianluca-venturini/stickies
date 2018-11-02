@@ -1,7 +1,4 @@
 .Stickie {
-  width: 100px;
-  height: 100px;
-
   position: absolute;
   background-color: #fffcb2;
 
@@ -11,6 +8,8 @@
   z-index: 0;
 
   resize: none;
+
+  border: none;
 }
 
 .Stickie:focus {
