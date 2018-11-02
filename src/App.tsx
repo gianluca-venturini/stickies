@@ -1,6 +1,7 @@
 import * as React from 'react';
 import './App.css';
 
+import * as uuid4 from 'uuid/v4';
 import { Stickie } from './Stickie';
 
 interface IStickie {
@@ -13,7 +14,6 @@ interface IStickie {
 
 interface IState {
   stickies: {[id: number]: IStickie};
-  nextId: number;
   connectionError: boolean;
 }
 
@@ -24,16 +24,15 @@ class App extends React.Component<{}, IState> {
     super(props);
     this.state = {
       connectionError: false,
-      nextId: 0,
       stickies: {
-        [-1]: {
+        ['1']: {
           coordinates: {
             x: 0,
             y: 0,
           },
           text: 'test123',
         },
-        [-2]: {
+        ['2']: {
           coordinates: {
             x: 100,
             y: 100,
@@ -121,12 +120,12 @@ class App extends React.Component<{}, IState> {
       x: e.clientX,
       y: e.clientY,
     }
+    const id = uuid4();
     this.updateState(s => (
       {
-        nextId: s.nextId + 1,
         stickies: {
           ...s.stickies,
-          [s.nextId]: {
+          [id]: {
             coordinates,
             text: ''
           }
