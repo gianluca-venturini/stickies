@@ -1,3 +1,4 @@
+import * as Automerge from 'automerge';
 import * as React from 'react';
 import * as uuid4 from 'uuid/v4';
 
@@ -13,8 +14,10 @@ interface IStickie {
   text: string;
 }
 
+interface IStickies {[id: string]: IStickie};
+
 interface IState {
-  stickies: {[id: number]: IStickie};
+  stickies?: IStickies;
   connectionError: boolean;
 }
 
@@ -28,22 +31,6 @@ class App extends React.Component<{}, IState> {
     super(props);
     this.state = {
       connectionError: false,
-      stickies: {
-        ['1']: {
-          coordinates: {
-            x: 0,
-            y: 0,
-          },
-          text: 'test123',
-        },
-        ['2']: {
-          coordinates: {
-            x: 100,
-            y: 100,
-          },
-          text: 'test123',
-        },
-      }
     }
   }
 
@@ -54,18 +41,28 @@ class App extends React.Component<{}, IState> {
     this.ws.addEventListener('message', event => {
       // tslint:disable-next-line:no-console
       console.log('Received message', event.data);
-      this.setState({
-        stickies: JSON.parse(event.data)
-      })
+      this.setState(s => {
+        const {id, changes} = JSON.parse(event.data);
+        return {
+          ...s,
+          stickies: Automerge.applyChanges(s.stickies || Automerge.init(id), changes)
+        }
+      });
     });
   }
 
   public render() {
+    const {stickies} = this.state;
+
+    if(!stickies) {
+      return null;
+    }
+
     return (
       <div className="App" onDoubleClick={this.handleDoubleClick}>
         {
-          Object.keys(this.state.stickies).map(stickieId => {
-            const stickie = this.state.stickies[stickieId];
+          Object.keys(stickies).map(stickieId => {
+            const stickie = stickies[stickieId];
             return (
               <Stickie 
                 coordinates={stickie.coordinates} 
@@ -84,41 +81,16 @@ class App extends React.Component<{}, IState> {
     );
   }
 
-  private deleteStickie = (stickieId: number) => {
-    this.updateState(s => {
-      delete s.stickies[stickieId];
-      return {
-        stickies: {
-          ...s.stickies,
-        }
-      };
-    });
+  private deleteStickie = (stickieId: string) => {
+    this.updateStickie(stickieId, null);
   }
 
-  private handleChangeStickieCoordinates = (stickieId: number, coordinates: {x: number, y: number}) => {
-    this.updateState(s => ({
-      stickies: {
-        ...s.stickies,
-        [stickieId]: {
-          ...s.stickies[stickieId],
-          coordinates
-        }
-      }
-    }));
+  private handleChangeStickieCoordinates = (stickieId: string, coordinates: {x: number, y: number}) => {
+    this.updateStickie(stickieId, {coordinates});
   }
 
-  private handleTextChange = (stickieId: number, text: string) => {
-    // tslint:disable-next-line:no-console
-    console.log(text);
-    this.updateState(s => ({
-      stickies: {
-        ...s.stickies,
-        [stickieId]: {
-          ...s.stickies[stickieId],
-          text
-        }
-      }
-    }));
+  private handleTextChange = (stickieId: string, text: string) => {
+    this.updateStickie(stickieId, {text});
   }
 
   private handleDoubleClick = (e: React.MouseEvent<HTMLElement>) => {
@@ -126,50 +98,44 @@ class App extends React.Component<{}, IState> {
       x: e.clientX - STICKIE_WIDTH / 2,
       y: e.clientY - STICKIE_HEIGHT / 2,
     }
-    const id = uuid4();
-    this.updateState(s => (
-      {
-        stickies: {
-          ...s.stickies,
-          [id]: {
-            coordinates,
-            text: ''
-          }
-        }
-      }
-    ));
+    const text = '';
+    this.updateStickie(uuid4(), {coordinates, text});
   }
 
-  private updateState = <K extends keyof IState>(
-    updateState: (
-      (
-        prevState: Readonly<IState>, 
-        props: Readonly<{}>
-      ) => (Pick<IState, K> | IState | null)
-    ) | (Pick<IState, K> | IState | null)
+  private updateStickie = (
+    id: string,
+    partialUpdates: Partial<IStickie> | null
   ) => {
-    if (typeof updateState === 'function') {
-      this.setState((state, props) => {
-        const newState = updateState(state, props);
-        // tslint:disable-next-line:no-console
-        console.log(newState);
-        if (newState && newState.stickies) {
-          this.updateStickiesServer(newState.stickies);
-        }
-        return newState;
-      });
-    } else {
-      this.setState(updateState);
-      // tslint:disable-next-line:no-console
-      console.log(updateState);
-      if (updateState && updateState.stickies) {
-        this.updateStickiesServer(updateState.stickies);
+    this.setState(s => {
+      if (!s.stickies) {
+        return s;
       }
-    }
+
+      const newStickies = Automerge.change(s.stickies, 'Update', (stickies: IStickies) => {        
+        if (partialUpdates === null) {
+          delete stickies[id];
+        }
+        else if (!stickies[id]) {
+          stickies[id] = partialUpdates as IStickie;
+        } else {
+          Object.keys(partialUpdates).forEach(key => {
+            stickies[id][key] = partialUpdates[key];
+          });
+        }
+
+      });
+      this.updateServer(s.stickies, newStickies);
+      return {
+        ...s,
+        stickies: newStickies
+      };
+    });
   }
 
-  private updateStickiesServer = (stickies: {[id: number]: IStickie}) => {
-    this.ws.send(JSON.stringify(stickies));
+  private updateServer = (oldStickies: IStickies, newStickies: IStickies) => {
+    const changes = Automerge.getChanges(oldStickies, newStickies);
+    const id = newStickies._actorId;
+    this.ws.send(JSON.stringify({id, changes}));
   }
 }
 
