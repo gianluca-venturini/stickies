@@ -10,6 +10,8 @@
   resize: none;
 
   border: none;
+
+  box-shadow: 0 0 4px rgb(200, 200, 200);
 }
 
 .Stickie:focus {
