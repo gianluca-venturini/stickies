@@ -42,10 +42,10 @@ class App extends React.Component<{}, IState> {
       // tslint:disable-next-line:no-console
       console.log('Received message', event.data);
       this.setState(s => {
-        const {id, changes} = JSON.parse(event.data);
+        const {changes} = JSON.parse(event.data);
         return {
           ...s,
-          stickies: Automerge.applyChanges(s.stickies || Automerge.init(id), changes)
+          stickies: Automerge.applyChanges(s.stickies || Automerge.init(), changes)
         }
       });
     });
